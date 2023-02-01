@@ -9,6 +9,8 @@
 #define MOTOR_L1 D7
 #define MOTOR_L2 D8
 
+#define NOCHANGE 1000
+
 const char *ssid = "robo123456";     // Enter SSID here
 const char *password = "robo123456"; // Enter Password here
 
@@ -18,8 +20,10 @@ IPAddress subnet(255, 255, 255, 0);
 
 AsyncWebServer server(80);
 
-void setMotor(char side, char direction)
+void setMotor(char side, int pwm)
 {
+  if (pwm == NOCHANGE) return;
+
   uint8_t M1, M2;
   if (side == 'L')
   {
@@ -30,24 +34,19 @@ void setMotor(char side, char direction)
   {
     M1 = MOTOR_R1;
     M2 = MOTOR_R2;
+  } else {
+    return;
   }
 
-  switch (direction)
+  if (pwm > 0)
   {
-  case 'H':
-    digitalWrite(M1, LOW);
-    digitalWrite(M2, LOW);
-    break;
-
-  case 'F':
-    digitalWrite(M1, LOW);
-    digitalWrite(M2, HIGH);
-    break;
-
-  case 'R':
-    digitalWrite(M1, HIGH);
-    digitalWrite(M2, LOW);
-    break;
+    analogWrite(M1, 0);
+    analogWrite(M2, pwm);
+  }
+  else
+  {
+    analogWrite(M1, pwm);
+    analogWrite(M2, 0);
   }
 }
 
@@ -92,8 +91,8 @@ void setup()
       [](AsyncWebServerRequest *request)
       {
         request->send(200);
-        setMotor('L', 'F');
-        setMotor('R', 'F');
+        setMotor('L', 255);
+        setMotor('R', 255);
       },
       NULL, NULL);
   server.on(
@@ -102,8 +101,30 @@ void setup()
       [](AsyncWebServerRequest *request)
       {
         request->send(200);
-        setMotor('L', 'R');
-        setMotor('R', 'R');
+        setMotor('L', -255);
+        setMotor('R', -255);
+      },
+      NULL, NULL);
+
+  server.on(
+      "/set",
+      HTTP_GET,
+      [](AsyncWebServerRequest *request)
+      {
+        request->send(200);
+
+        char motor = '';
+        int pwm = NOCHANGE;
+        size_t paramCount = request->params();
+        for (size_t p=0;p<paramCount;p++) {
+          AsyncWebParameter* param = request->getParam(p);
+          if (param->name() == "motor") {
+            motor = param->value()[0];
+          } else if (param->name() == "pwm") {
+            pwm = param->value().toInt();
+          }
+        }
+        setMotor(motor, pwm);
       },
       NULL, NULL);
 
