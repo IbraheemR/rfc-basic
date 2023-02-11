@@ -19,10 +19,12 @@ IPAddress gateway(10, 0, 1, 1);
 IPAddress subnet(255, 255, 255, 0);
 
 AsyncWebServer server(80);
+AsyncWebSocket ws("/ws");
 
 void setMotor(char side, int pwm)
 {
-  if (pwm == NOCHANGE) return;
+  if (pwm == NOCHANGE)
+    return;
 
   uint8_t M1, M2;
   if (side == 'L')
@@ -34,7 +36,9 @@ void setMotor(char side, int pwm)
   {
     M1 = MOTOR_R1;
     M2 = MOTOR_R2;
-  } else {
+  }
+  else
+  {
     return;
   }
 
@@ -49,6 +53,50 @@ void setMotor(char side, int pwm)
     analogWrite(M2, 0);
   }
 }
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
+{
+  AwsFrameInfo *info = (AwsFrameInfo*)arg;
+  if (info->final && info->index == 0 && info->len == len) {
+    data[len] = 0;
+    uint8_t motor_sidetype = data[0];
+    uint8_t pwm = data[1];
+
+    bool isRightMotor = (motor_sidetype & 0b01) > 0;
+    bool isReversed = (motor_sidetype & 0b10) > 0;
+
+    Serial.print(isRightMotor ? "R" : "L");
+    Serial.print(isReversed ? "-" : "+");
+    Serial.println(pwm);
+
+    setMotor(isRightMotor ? 'R' : 'L', pwm * (isReversed ? -1: 1));
+  }
+}
+
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
+             void *arg, uint8_t *data, size_t len)
+{
+  switch (type)
+  {
+  case WS_EVT_CONNECT:
+    Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+    break;
+  case WS_EVT_DISCONNECT:
+    Serial.printf("WebSocket client #%u disconnected\n", client->id());
+    break;
+  case WS_EVT_DATA:
+    handleWebSocketMessage(arg, data, len);
+    break;
+  case WS_EVT_PONG:
+  case WS_EVT_ERROR:
+    break;
+  }
+}
+
+void initWebSocket() {
+  ws.onEvent(onEvent);
+  server.addHandler(&ws);
+}
+
 
 void setup()
 {
@@ -74,6 +122,8 @@ void setup()
 
   WiFi.softAPConfig(local_ip, gateway, subnet);
   WiFi.softAP(ssid, password);
+
+  initWebSocket();
 
   server.on(
       "/halt",
@@ -116,11 +166,15 @@ void setup()
         char motor = 'X';
         int pwm = NOCHANGE;
         size_t paramCount = request->params();
-        for (size_t p=0;p<paramCount;p++) {
-          AsyncWebParameter* param = request->getParam(p);
-          if (param->name() == "motor") {
+        for (size_t p = 0; p < paramCount; p++)
+        {
+          AsyncWebParameter *param = request->getParam(p);
+          if (param->name() == "motor")
+          {
             motor = param->value()[0];
-          } else if (param->name() == "pwm") {
+          }
+          else if (param->name() == "pwm")
+          {
             pwm = param->value().toInt();
           }
         }
@@ -128,7 +182,8 @@ void setup()
       },
       NULL, NULL);
 
-  server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
+  server.serveStatic("/", LittleFS, "/")
+      .setDefaultFile("index.html");
 
   server.begin();
 
@@ -137,5 +192,5 @@ void setup()
 
 void loop()
 {
-  // put your main code here, to run repeatedly:
+  ws.cleanupClients();
 }

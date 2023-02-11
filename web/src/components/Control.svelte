@@ -2,6 +2,8 @@
     import { onMount } from "svelte";
     export let motor: "L" | "R";
 
+    export let ws: WebSocket;
+
     function slope(x: number) {
         return Math.min(Math.max(x, 0), 1);
     }
@@ -37,7 +39,11 @@
     onMount(() => {
         controlAbsPos = control.clientHeight / 2;
         setInterval(() => {
-            fetch(`/set?motor=${motor}&pwm=${controlPos}`);
+            // fetch(`/set?motor=${motor}&pwm=${controlPos}`);
+            if (ws) ws.send(new Uint8Array([
+                (controlPos < 0 ? 2 : 0) + (motor == "R" ? 1 : 0),
+                Math.abs(controlPos)
+            ]))
         }, 100);
     });
 </script>

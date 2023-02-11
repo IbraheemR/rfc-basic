@@ -1,11 +1,10 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Control from "../components/Control.svelte";
+import TwoControls from "../components/TwoControls.svelte";
 ---
 
 <Layout>
 	<div class="flex flex-row h-full">
-		<Control client:only motor="L"/>
-		<Control client:only motor="R"/>
+		<TwoControls client:only />
 	</div>
 </Layout>
