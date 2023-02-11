@@ -11,8 +11,8 @@
 
 #define NOCHANGE 1000
 
-const char *ssid = "robo123456";     // Enter SSID here
-const char *password = "robo123456"; // Enter Password here
+const char *ssid = "robofc0004";     // Enter SSID here
+const char *password = "robofc0004"; // Enter Password here
 
 IPAddress local_ip(10, 0, 1, 1);
 IPAddress gateway(10, 0, 1, 1);
@@ -45,7 +45,7 @@ void setMotor(char side, int pwm)
   }
   else
   {
-    analogWrite(M1, pwm);
+    analogWrite(M1, -pwm);
     analogWrite(M2, 0);
   }
 }
@@ -63,8 +63,8 @@ void setup()
   pinMode(MOTOR_L1, OUTPUT);
   pinMode(MOTOR_L2, OUTPUT);
 
-  setMotor('L', 'H');
-  setMotor('R', 'H');
+  setMotor('L', 0);
+  setMotor('R', 0);
 
   if (!LittleFS.begin())
   {
@@ -113,7 +113,7 @@ void setup()
       {
         request->send(200);
 
-        char motor = '';
+        char motor = 'X';
         int pwm = NOCHANGE;
         size_t paramCount = request->params();
         for (size_t p=0;p<paramCount;p++) {

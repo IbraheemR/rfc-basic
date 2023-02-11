@@ -1,0 +1,11 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Control from "../components/Control.svelte";
+---
+
+<Layout>
+	<div class="flex flex-row h-full">
+		<Control client:only motor="L"/>
+		<Control client:only motor="R"/>
+	</div>
+</Layout>
